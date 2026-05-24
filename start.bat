@@ -13,7 +13,7 @@ if %ERRORLEVEL% EQU 0 (
   set PKG_MANAGER=bun
   set INSTALL_CMD=call bun install
   set BUILD_CMD=call bun run build
-  set START_CMD=call bun run start:all
+  set START_CMD=call bun run concurrently -k -n "WEB,PRINT" -c "cyan,magenta" "bun dist/server/server.js" "bun print-server/src/index.ts"
   echo [OK] Bun detected as the package manager.
   goto :install
 )
@@ -23,7 +23,7 @@ if %ERRORLEVEL% EQU 0 (
   set PKG_MANAGER=npm
   set INSTALL_CMD=call npm install
   set BUILD_CMD=call npm run build
-  set START_CMD=call npx concurrently -k -n "WEB,PRINT" -c "cyan,magenta" "vinxi start" "npm run start --prefix print-server"
+  set START_CMD=call npx concurrently -k -n "WEB,PRINT" -c "cyan,magenta" "node dist/server/server.js" "npm run start --prefix print-server"
   echo [OK] Node.js/NPM detected as the package manager.
   goto :install
 )

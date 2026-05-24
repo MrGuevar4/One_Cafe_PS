@@ -1,0 +1,161 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-neon: var(--neon);
+  --color-neon-foreground: var(--neon-foreground);
+}
+
+:root {
+  --radius: 0.75rem;
+  /* Dark by default — POS terminals are bright environments, dark UI reduces glare */
+  --background: oklch(0.18 0.015 260);
+  --foreground: oklch(0.97 0.005 260);
+  --card: oklch(0.22 0.018 260);
+  --card-foreground: oklch(0.97 0.005 260);
+  --popover: oklch(0.22 0.018 260);
+  --popover-foreground: oklch(0.97 0.005 260);
+  --primary: oklch(0.72 0.19 50); /* vibrant orange */
+  --primary-foreground: oklch(0.15 0.01 260);
+  --secondary: oklch(0.28 0.02 260);
+  --secondary-foreground: oklch(0.97 0.005 260);
+  --muted: oklch(0.26 0.018 260);
+  --muted-foreground: oklch(0.7 0.02 260);
+  --accent: oklch(0.32 0.025 260);
+  --accent-foreground: oklch(0.97 0.005 260);
+  --destructive: oklch(0.62 0.23 25);
+  --destructive-foreground: oklch(0.98 0.005 260);
+  --border: oklch(0.3 0.02 260);
+  --input: oklch(0.3 0.02 260);
+  --ring: oklch(0.72 0.19 50);
+  --neon: oklch(0.85 0.24 145); /* neon green */
+  --neon-foreground: oklch(0.15 0.01 260);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+/* Receipt is hidden on screen, only visible when printing */
+.printable-receipt {
+  display: none;
+}
+
+@media print {
+  html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+  }
+  body * {
+    visibility: hidden;
+  }
+  #printable-receipt, #printable-receipt * {
+    visibility: visible;
+  }
+  #printable-receipt {
+    display: block !important;
+    position: absolute;
+    left: 0;
+    top: 0;
+    margin: 0 auto;
+    padding: 4mm;
+    max-width: 300px;
+    width: 100%;
+    color: #000;
+    background: #fff;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 12px;
+    line-height: 1.4;
+  }
+  #printable-receipt .r-header {
+    text-align: center;
+    font-weight: 700;
+    font-size: 16px;
+    margin-bottom: 2px;
+  }
+  #printable-receipt .r-sub {
+    text-align: center;
+    font-size: 11px;
+    margin-bottom: 4px;
+  }
+  #printable-receipt .r-divider {
+    text-align: center;
+    overflow: hidden;
+    white-space: nowrap;
+    margin: 4px 0;
+    letter-spacing: 1px;
+  }
+  #printable-receipt .r-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  #printable-receipt .r-table {
+    font-weight: 700;
+    font-size: 14px;
+    text-align: center;
+    border: 1px dashed #000;
+    padding: 4px;
+    margin: 6px 0;
+  }
+  #printable-receipt .r-item {
+    margin-bottom: 2px;
+  }
+  #printable-receipt .r-item-name {
+    flex: 1;
+    text-align: left;
+  }
+  #printable-receipt .r-item-price {
+    text-align: right;
+  }
+  #printable-receipt .r-total {
+    text-align: right;
+    font-weight: 700;
+    font-size: 15px;
+    margin-top: 6px;
+  }
+  #printable-receipt .r-footer {
+    text-align: center;
+    margin-top: 6px;
+    font-size: 12px;
+  }
+  @page {
+    size: 80mm auto;
+    margin: 0;
+  }
+}

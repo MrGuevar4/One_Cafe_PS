@@ -6,19 +6,8 @@ import { routePrintJob, type PrintJobPayload } from "./router.js";
 
 const app = express();
 
-// Allow requests from the POS frontend (any localhost origin)
-app.use(
-  cors({
-    origin: (origin, cb) => {
-      // Allow null origin (direct file://), localhost, and 127.0.0.1
-      if (!origin || origin.includes("localhost") || origin.includes("127.0.0.1")) {
-        cb(null, true);
-      } else {
-        cb(new Error("Not allowed by CORS"));
-      }
-    },
-  }),
-);
+// Allow requests from any origin in local LAN environment
+app.use(cors());
 app.use(express.json());
 
 // ─── Health / Printer Status ──────────────────────────────────────────────────
@@ -76,7 +65,7 @@ app.put("/api/config", (req, res) => {
 const config = loadConfig();
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : config.serverPort ?? 3001;
 
-app.listen(PORT, "127.0.0.1", () => {
-  console.log(`ONE Cafe Print Server running on http://127.0.0.1:${PORT}`);
-  console.log(`Status: http://127.0.0.1:${PORT}/api/status`);
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`ONE Cafe Print Server running on http://0.0.0.0:${PORT}`);
+  console.log(`Status: http://0.0.0.0:${PORT}/api/status`);
 });

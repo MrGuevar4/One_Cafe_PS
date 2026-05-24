@@ -1,0 +1,33 @@
+{
+  "printers": {
+    "kitchen": {
+      "name": "Kitchen Printer",
+      "type": "tcp",
+      "host": "192.168.1.101",
+      "port": 9100,
+      "enabled": true
+    },
+    "barista": {
+      "name": "Barista Printer",
+      "type": "tcp",
+      "host": "192.168.1.102",
+      "port": 9100,
+      "enabled": true
+    },
+    "shisha": {
+      "name": "Shisha/Hookah Printer",
+      "type": "tcp",
+      "host": "192.168.1.103",
+      "port": 9100,
+      "enabled": true
+    },
+    "cashier": {
+      "name": "Cashier Printer",
+      "type": "tcp",
+      "host": "192.168.1.104",
+      "port": 9100,
+      "enabled": true
+    }
+  },
+  "serverPort": 3001
+}

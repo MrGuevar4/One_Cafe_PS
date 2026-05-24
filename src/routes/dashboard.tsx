@@ -7,8 +7,8 @@ import { AppNav } from "@/components/AppNav";
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
     meta: [
-      { title: "Sales Dashboard — ONE Cafe" },
-      { name: "description", content: "Today's sales and orders summary." },
+      { title: "داشبۆردی فرۆشتن — ONE Cafe" },
+      { name: "description", content: "پوختەی داهات و داواکارییەکانی ئەمڕۆ." },
     ],
   }),
   component: DashboardPage,
@@ -38,9 +38,9 @@ function DashboardPage() {
     <div className="min-h-screen">
       <AppNav />
       <div className="p-4 max-w-6xl mx-auto">
-        <h1 className="text-2xl font-bold mb-1">Sales Dashboard</h1>
+        <h1 className="text-2xl font-bold mb-1">داشبۆردی فرۆشتن</h1>
         <p className="text-sm text-muted-foreground mb-6">
-          {new Date().toLocaleDateString(undefined, {
+          {new Date().toLocaleDateString("ku-IQ", {
             weekday: "long",
             year: "numeric",
             month: "long",
@@ -50,19 +50,19 @@ function DashboardPage() {
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
           <StatCard
-            label="Today's Revenue"
+            label="داهاتی ئەمڕۆ"
             value={formatPrice(revenue)}
             icon={<DollarSign className="w-5 h-5" />}
             accent="neon"
           />
           <StatCard
-            label="Orders Today"
+            label="داواکارییەکانی ئەمڕۆ"
             value={today.length.toString()}
             icon={<ShoppingBag className="w-5 h-5" />}
             accent="primary"
           />
           <StatCard
-            label="Avg Ticket"
+            label="تێکڕای پسوولە"
             value={formatPrice(avg)}
             icon={<TrendingUp className="w-5 h-5" />}
             accent="primary"
@@ -71,15 +71,15 @@ function DashboardPage() {
 
         <div className="bg-card border border-border rounded-xl overflow-hidden">
           <div className="px-4 py-3 border-b border-border flex items-center justify-between">
-            <h2 className="font-bold">Today's Orders</h2>
+            <h2 className="font-bold">داواکارییەکانی ئەمڕۆ</h2>
             <span className="text-xs text-muted-foreground">
-              {itemsSold} items sold
+              {itemsSold} دانە فرۆشراون
             </span>
           </div>
           <div className="divide-y divide-border">
             {today.length === 0 && (
               <div className="text-center py-12 text-muted-foreground text-sm">
-                No orders yet today. Go ring some up!
+                هیچ داواکارییەک نییە بۆ ئەمڕۆ. بچۆ هەندێک تۆمار بکە!
               </div>
             )}
             {today.map((o) => (
@@ -93,7 +93,7 @@ function DashboardPage() {
                     {o.lines.map((l) => `${l.qty}× ${l.name}`).join(", ")}
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    {new Date(o.createdAt).toLocaleTimeString()}
+                    {new Date(o.createdAt).toLocaleTimeString("ku-IQ")}
                   </div>
                 </div>
                 <div className="font-bold text-neon shrink-0">{formatPrice(o.total)}</div>

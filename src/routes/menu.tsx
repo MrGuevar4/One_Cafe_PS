@@ -13,8 +13,8 @@ import { AppNav } from "@/components/AppNav";
 export const Route = createFileRoute("/menu")({
   head: () => ({
     meta: [
-      { title: "Menu Management — ONE Cafe" },
-      { name: "description", content: "Create, edit, and remove menu items." },
+      { title: "بەڕێوەبردنی بابەتەکان — ONE Cafe" },
+      { name: "description", content: "دروستکردن، دەستکاریکردن و سڕینەوەی بابەتەکانی لیستەکە." },
     ],
   }),
   component: MenuPage,
@@ -34,16 +34,16 @@ function MenuPage() {
       <div className="p-4 max-w-6xl mx-auto">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-2xl font-bold">Menu Management</h1>
+            <h1 className="text-2xl font-bold">بەڕێوەبردنی بابەتەکان</h1>
             <p className="text-sm text-muted-foreground">
-              Manage all items shown on the POS screen
+              بەڕێوەبردنی هەموو ئەو بابەتانەی لەسەر شاشەی فرۆشتن پیشان دەدرێن
             </p>
           </div>
           <button
             onClick={() => setCreating(true)}
             className="px-4 py-2 rounded-lg bg-primary text-primary-foreground font-semibold flex items-center gap-2 shadow-lg shadow-primary/20"
           >
-            <Plus className="w-4 h-4" /> New Item
+            <Plus className="w-4 h-4" /> بابەتی نوێ
           </button>
         </div>
 
@@ -79,7 +79,7 @@ function MenuPage() {
                       </button>
                       <button
                         onClick={() => {
-                          if (confirm(`Delete "${m.name}"?`)) deleteItem(m.id);
+                          if (confirm(`دڵنیای لە سڕینەوەی "${m.name}"؟`)) deleteItem(m.id);
                         }}
                         className="w-8 h-8 rounded-md bg-accent hover:bg-destructive hover:text-destructive-foreground flex items-center justify-center"
                       >
@@ -90,7 +90,7 @@ function MenuPage() {
                 ))}
                 {items.length === 0 && (
                   <div className="col-span-full text-center text-sm text-muted-foreground py-6 border border-dashed border-border rounded-xl">
-                    No items in {cat}
+                    هیچ بابەتێک لە پۆلی {cat} نییە
                   </div>
                 )}
               </div>
@@ -128,7 +128,7 @@ function ItemModal({
   onSave: (v: Omit<MenuItem, "id">) => void;
 }) {
   const [name, setName] = useState(item?.name ?? "");
-  const [category, setCategory] = useState<Category>(item?.category ?? "Fast Food");
+  const [category, setCategory] = useState<Category>(item?.category ?? "خواردنی خێرا");
   const [price, setPrice] = useState<number>(item?.price ?? 0);
   const [icon, setIcon] = useState(item?.icon ?? "🍽️");
   const [color, setColor] = useState(item?.color ?? COLOR_OPTIONS[0]);
@@ -137,25 +137,25 @@ function ItemModal({
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div className="bg-card border border-border rounded-xl max-w-md w-full overflow-hidden">
         <div className="px-4 py-3 border-b border-border flex items-center justify-between">
-          <h3 className="font-bold">{item ? "Edit Item" : "New Item"}</h3>
+          <h3 className="font-bold">{item ? "دەستکاریکردنی بابەت" : "بابەتی نوێ"}</h3>
           <button onClick={onClose}>
             <X className="w-5 h-5" />
           </button>
         </div>
         <div className="p-4 space-y-4">
           <div>
-            <label className="text-xs font-semibold text-muted-foreground uppercase">Name</label>
+            <label className="text-xs font-semibold text-muted-foreground uppercase">ناو</label>
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="mt-1 w-full px-3 py-2 rounded-lg bg-background border border-border focus:border-primary outline-none"
-              placeholder="e.g. Cheeseburger"
+              placeholder="نموونە: بەرگر"
             />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-xs font-semibold text-muted-foreground uppercase">
-                Category
+                پۆل
               </label>
               <select
                 value={category}
@@ -171,7 +171,7 @@ function ItemModal({
             </div>
             <div>
               <label className="text-xs font-semibold text-muted-foreground uppercase">
-                Price (IQD)
+                نرخ (دینار)
               </label>
               <input
                 type="number"
@@ -182,7 +182,7 @@ function ItemModal({
             </div>
           </div>
           <div>
-            <label className="text-xs font-semibold text-muted-foreground uppercase">Icon</label>
+            <label className="text-xs font-semibold text-muted-foreground uppercase">ئایکۆن</label>
             <div className="mt-1 flex flex-wrap gap-1">
               {ICON_OPTIONS.map((i) => (
                 <button
@@ -198,7 +198,7 @@ function ItemModal({
             </div>
           </div>
           <div>
-            <label className="text-xs font-semibold text-muted-foreground uppercase">Color</label>
+            <label className="text-xs font-semibold text-muted-foreground uppercase">ڕەنگ</label>
             <div className="mt-1 flex flex-wrap gap-2">
               {COLOR_OPTIONS.map((c) => (
                 <button
@@ -218,7 +218,7 @@ function ItemModal({
             onClick={onClose}
             className="px-4 py-2 rounded-lg bg-secondary text-secondary-foreground text-sm font-semibold"
           >
-            Cancel
+            پاشگەزبوونەوە
           </button>
           <button
             onClick={() => {
@@ -227,7 +227,7 @@ function ItemModal({
             }}
             className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold"
           >
-            Save
+            تۆمارکردن
           </button>
         </div>
       </div>

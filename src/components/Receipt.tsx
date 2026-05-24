@@ -10,20 +10,20 @@ export function Receipt({ order }: { order: Order }) {
       <div className="r-divider">{dashed}</div>
 
       <div className="r-row">
-        <span>Order #</span>
+        <span>ژمارەی داواکاری</span>
         <span>{order.number}</span>
       </div>
       <div className="r-row">
-        <span>Date</span>
-        <span>{d.toLocaleDateString()}</span>
+        <span>ڕێکەوت</span>
+        <span>{d.toLocaleDateString("ku-IQ")}</span>
       </div>
       <div className="r-row">
-        <span>Time</span>
-        <span>{d.toLocaleTimeString()}</span>
+        <span>کات</span>
+        <span>{d.toLocaleTimeString("ku-IQ")}</span>
       </div>
 
       <div className="r-table">
-        Table: {order.table && order.table.trim() ? order.table : "Takeaway"}
+        مێز: {order.table && order.table.trim() ? order.table : "سەفەری"}
       </div>
 
       <div className="r-divider">{dashed}</div>
@@ -42,19 +42,19 @@ export function Receipt({ order }: { order: Order }) {
       <div className="r-divider">{dashed}</div>
 
       <div className="r-row">
-        <span>Subtotal</span>
+        <span>کۆی گشتی</span>
         <span>{order.subtotal.toLocaleString()}</span>
       </div>
       {order.tax > 0 && (
         <div className="r-row">
-          <span>Tax</span>
+          <span>باج</span>
           <span>{order.tax.toLocaleString()}</span>
         </div>
       )}
-      <div className="r-total">TOTAL: {order.total.toLocaleString()} IQD</div>
+      <div className="r-total">کۆی کۆتایی: {order.total.toLocaleString()} دینار</div>
 
       <div className="r-divider">{dashed}</div>
-      <div className="r-footer">Thank you for visiting ONE!</div>
+      <div className="r-footer">سوپاس بۆ سەردانەکەتان!</div>
     </div>
   );
 }

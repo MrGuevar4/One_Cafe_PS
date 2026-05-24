@@ -7,9 +7,9 @@
     "dev": "vite dev",
     "build": "vite build",
     "build:dev": "vite build --mode development",
-    "start": "node dist/server/server.js",
+    "start": "vite preview",
     "preview": "vite preview",
-    "start:all": "concurrently -k -n \"WEB,PRINT\" -c \"cyan,magenta\" \"node dist/server/server.js\" \"npm run start --prefix print-server\"",
+    "start:all": "concurrently -k -n \"WEB,PRINT\" -c \"cyan,magenta\" \"vite preview\" \"npm run start --prefix print-server\"",
     "dev:all": "concurrently -k -n \"WEB,PRINT\" -c \"cyan,magenta\" \"vite dev\" \"npm run dev --prefix print-server\"",
     "lint": "eslint .",
     "format": "prettier --write ."

@@ -12,14 +12,14 @@ if command -v bun >/dev/null 2>&1; then
   PKG_MANAGER="bun"
   INSTALL_CMD="bun install"
   BUILD_CMD="bun run build"
-  START_CMD="bun run concurrently -k -n \"WEB,PRINT\" -c \"cyan,magenta\" \"bun dist/server/server.js\" \"bun print-server/src/index.ts\""
+  START_CMD="bun run concurrently -k -n \"WEB,PRINT\" -c \"cyan,magenta\" \"bun run preview\" \"bun print-server/src/index.ts\""
   echo "✔ Bun detected as the package manager."
 elif command -v npm >/dev/null 2>&1; then
   PKG_MANAGER="npm"
   INSTALL_CMD="npm install"
   BUILD_CMD="npm run build"
-  # Run concurrently using npx, running the compiled server.js with Node directly
-  START_CMD="npx concurrently -k -n \"WEB,PRINT\" -c \"cyan,magenta\" \"node dist/server/server.js\" \"npm run start --prefix print-server\""
+  # Run concurrently using npx, running the production preview server (vite preview)
+  START_CMD="npx concurrently -k -n \"WEB,PRINT\" -c \"cyan,magenta\" \"npm run preview\" \"npm run start --prefix print-server\""
   echo "✔ Node.js/NPM detected as the package manager."
 else
   echo "❌ Error: Neither Bun nor Node.js/NPM was found on this system."

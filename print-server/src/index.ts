@@ -7,7 +7,7 @@ import { routePrintJob, type PrintJobPayload } from "./router.js";
 const app = express();
 
 // Allow requests from any origin in local LAN environment
-app.use(cors());
+app.use(cors({ origin: '*' }));
 app.use(express.json());
 
 // ─── Health / Printer Status ──────────────────────────────────────────────────

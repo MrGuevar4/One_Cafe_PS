@@ -187,19 +187,26 @@ export const dbService = {
 
   addMenuItem(item: Omit<DBMenuItem, "id">): string {
     const id = `m_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+    const name = (item && item.name) || "";
+    const category = (item && item.category) || "";
+    const price = (item && Number(item.price)) || 0;
+    const color = (item && item.color) || null;
+    const icon = (item && item.icon) || null;
+
     db.query("INSERT INTO menu_items (id, name, category, price, color, icon) VALUES (?, ?, ?, ?, ?, ?)")
-      .run(id, item.name, item.category, item.price, item.color ?? null, item.icon ?? null);
+      .run(id, name, category, price, color, icon);
     return id;
   },
 
   updateMenuItem(id: string, patch: Partial<DBMenuItem>): void {
+    if (!patch) return;
     const sets: string[] = [];
     const vals: any[] = [];
-    if (patch.name !== undefined) { sets.push("name = ?"); vals.push(patch.name); }
-    if (patch.category !== undefined) { sets.push("category = ?"); vals.push(patch.category); }
-    if (patch.price !== undefined) { sets.push("price = ?"); vals.push(patch.price); }
-    if (patch.color !== undefined) { sets.push("color = ?"); vals.push(patch.color ?? null); }
-    if (patch.icon !== undefined) { sets.push("icon = ?"); vals.push(patch.icon ?? null); }
+    if (patch.name !== undefined) { sets.push("name = ?"); vals.push(patch.name || ""); }
+    if (patch.category !== undefined) { sets.push("category = ?"); vals.push(patch.category || ""); }
+    if (patch.price !== undefined) { sets.push("price = ?"); vals.push(Number(patch.price) || 0); }
+    if (patch.color !== undefined) { sets.push("color = ?"); vals.push(patch.color || null); }
+    if (patch.icon !== undefined) { sets.push("icon = ?"); vals.push(patch.icon || null); }
     
     if (sets.length === 0) return;
     vals.push(id);
@@ -207,7 +214,7 @@ export const dbService = {
   },
 
   deleteMenuItem(id: string): void {
-    db.query("DELETE FROM menu_items WHERE id = ?").run(id);
+    db.query("DELETE FROM menu_items WHERE id = ?").run(id || "");
   },
 
   // Orders CRUD
@@ -238,8 +245,18 @@ export const dbService = {
   },
 
   addOrder(order: DBOrder): void {
-    const tableLabel = order.table?.trim() || "Takeaway";
-    
+    if (!order) return;
+    const orderId = order.id || `ord_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+    const tableLabel = (order.table || "").trim() || "Takeaway";
+    const orderNumber = Number(order.number) || 0;
+    const createdAt = order.createdAt || new Date().toISOString();
+    const subtotal = Number(order.subtotal) || 0;
+    const tax = Number(order.tax) || 0;
+    const total = Number(order.total) || 0;
+    const table_label = order.table || null;
+    const status = order.status || "pending";
+    const lines = Array.isArray(order.lines) ? order.lines : [];
+
     db.transaction(() => {
       // 1. Check for active open session for this table label
       let session = db.query("SELECT id FROM table_sessions WHERE table_label = ? AND status = 'open'").get(tableLabel) as { id: string } | null;
@@ -253,29 +270,31 @@ export const dbService = {
 
       // 2. Insert the order linked to the session
       db.query("INSERT INTO orders (id, session_id, number, created_at, subtotal, tax, total, table_label, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")
-        .run(order.id, sessionId, order.number, order.createdAt, order.subtotal, order.tax, order.total, order.table || null, order.status);
+        .run(orderId, sessionId, orderNumber, createdAt, subtotal, tax, total, table_label, status);
 
       // 3. Insert order lines
       const insertLine = db.prepare("INSERT INTO order_lines (id, order_id, item_id, name, category, price, qty) VALUES ($id, $orderId, $itemId, $name, $category, $price, $qty)");
-      for (let i = 0; i < order.lines.length; i++) {
-        const l = order.lines[i];
+      for (let i = 0; i < lines.length; i++) {
+        const l = lines[i];
+        if (!l) continue;
         insertLine.run({
-          $id: `${order.id}_line_${i}`,
-          $orderId: order.id,
-          $itemId: l.itemId,
-          $name: l.name,
-          $category: l.category,
-          $price: l.price,
-          $qty: l.qty,
+          $id: `${orderId}_line_${i}`,
+          $orderId: orderId,
+          $itemId: l.itemId || "",
+          $name: l.name || "",
+          $category: l.category || "",
+          $price: Number(l.price) || 0,
+          $qty: Number(l.qty) || 0,
         });
       }
     })();
   },
 
   updateOrder(id: string, patch: Partial<DBOrder>): void {
+    if (!patch) return;
     const sets: string[] = [];
     const vals: any[] = [];
-    if (patch.status !== undefined) { sets.push("status = ?"); vals.push(patch.status); }
+    if (patch.status !== undefined) { sets.push("status = ?"); vals.push(patch.status || "pending"); }
     if (sets.length === 0) return;
     vals.push(id);
     db.query(`UPDATE orders SET ${sets.join(", ")} WHERE id = ?`).run(...vals);
@@ -367,17 +386,19 @@ export const dbService = {
   },
 
   settleSession(id: string, paymentMethod: "cash" | "card", amountTendered: number): void {
+    const pMethod = paymentMethod || "cash";
+    const amtTendered = Number(amountTendered) || 0;
     db.query("UPDATE table_sessions SET status = 'settled', settled_at = ?, payment_method = ?, amount_tendered = ? WHERE id = ?")
-      .run(new Date().toISOString(), paymentMethod, amountTendered, id);
+      .run(new Date().toISOString(), pMethod, amtTendered, id);
   },
 
   deleteSession(id: string): void {
-    db.query("DELETE FROM table_sessions WHERE id = ?").run(id);
+    db.query("DELETE FROM table_sessions WHERE id = ?").run(id || "");
   },
 
   reopenSession(id: string): void {
     db.query("UPDATE table_sessions SET status = 'open', settled_at = NULL, payment_method = NULL, amount_tendered = NULL WHERE id = ?")
-      .run(id);
+      .run(id || "");
   },
 
   // Expenses CRUD
@@ -394,20 +415,25 @@ export const dbService = {
 
   addExpense(e: Omit<DBExpense, "id" | "timestamp">): void {
     const id = `exp_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+    const category = (e && e.category) || "Other";
+    const description = (e && e.description) || "";
+    const amount = (e && Number(e.amount)) || 0;
+
     db.query("INSERT INTO expenses (id, category, description, amount, timestamp) VALUES (?, ?, ?, ?, ?)")
-      .run(id, e.category, e.description, e.amount, new Date().toISOString());
+      .run(id, category, description, amount, new Date().toISOString());
   },
 
   deleteExpense(id: string): void {
-    db.query("DELETE FROM expenses WHERE id = ?").run(id);
+    db.query("DELETE FROM expenses WHERE id = ?").run(id || "");
   },
 
   updateExpense(id: string, patch: Partial<DBExpense>): void {
+    if (!patch) return;
     const sets: string[] = [];
     const vals: any[] = [];
-    if (patch.category !== undefined) { sets.push("category = ?"); vals.push(patch.category); }
-    if (patch.description !== undefined) { sets.push("description = ?"); vals.push(patch.description); }
-    if (patch.amount !== undefined) { sets.push("amount = ?"); vals.push(patch.amount); }
+    if (patch.category !== undefined) { sets.push("category = ?"); vals.push(patch.category || "Other"); }
+    if (patch.description !== undefined) { sets.push("description = ?"); vals.push(patch.description || ""); }
+    if (patch.amount !== undefined) { sets.push("amount = ?"); vals.push(Number(patch.amount) || 0); }
     
     if (sets.length === 0) return;
     vals.push(id);
@@ -425,11 +451,12 @@ export const dbService = {
   },
 
   addHeldOrder(id: string, lines: DBOrderLine[]): void {
+    const safeLines = Array.isArray(lines) ? lines : [];
     db.query("INSERT INTO held_orders (id, lines_json, created_at) VALUES (?, ?, ?)")
-      .run(id, JSON.stringify(lines), new Date().toISOString());
+      .run(id || "", JSON.stringify(safeLines), new Date().toISOString());
   },
 
   deleteHeldOrder(id: string): void {
-    db.query("DELETE FROM held_orders WHERE id = ?").run(id);
+    db.query("DELETE FROM held_orders WHERE id = ?").run(id || "");
   },
 };

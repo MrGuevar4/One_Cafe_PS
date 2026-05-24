@@ -104,20 +104,28 @@ bun install
 cd ..
 ```
 
-### Running Locally
+### Running Locally (Unified Orchestration)
 
-1. **Launch the POS Frontend**:
-   ```bash
-   bun run dev
-   ```
-   Open `http://localhost:3000` in your browser.
+You can launch both the POS Frontend Web Application and the Companion Print Server concurrently using a single command:
 
-2. **Launch the Companion Print Server**:
+1. **Development Mode** (with hot-module reloading and unified logging for both apps):
    ```bash
-   cd print-server
-   bun run dev
+   bun run dev:all
    ```
-   The print server runs on `http://127.0.0.1:3001`.
+   Open `http://localhost:3000` to access the POS.
+
+2. **Production Mode** (runs the compiled Vinxi server and the print server concurrently):
+   ```bash
+   # First build the production web package
+   bun run build
+   
+   # Start both services concurrently
+   bun run start:all
+   ```
+
+Alternatively, you can run them individually:
+* **POS Web Server**: `bun run dev` (dev) or `bun run start` (production)
+* **Print Server**: `bun --cwd print-server dev` (dev) or `bun --cwd print-server start` (production)
 
 ---
 

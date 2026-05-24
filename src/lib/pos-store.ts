@@ -1,14 +1,10 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { createServerFn } from "@tanstack/react-start";
 
 // ─── Category & Menu ──────────────────────────────────────────────────────────
 export type Category = "خواردنی خێرا" | "خواردنەوەی گەرم" | "خواردنەوەی سارد" | "نێرگەلە";
 export const CATEGORIES: Category[] = ["خواردنی خێرا", "خواردنەوەی گەرم", "خواردنەوەی سارد", "نێرگەلە"];
-
-/** Which printer a category routes to */
-export function printerForCategory(cat: Category): "kitchen" | "cafe" {
-  if (cat === "خواردنی خێرا") return "kitchen";
-  return "cafe";
-}
 
 export interface MenuItem {
   id: string;
@@ -85,200 +81,275 @@ export interface Expense {
 // ─── Theme ────────────────────────────────────────────────────────────────────
 export type Theme = "dark" | "cyberpunk";
 
-// ─── Storage Keys ────────────────────────────────────────────────────────────
-const MENU_KEY = "one_cafe_menu_v1";
-const ORDERS_KEY = "one_cafe_orders_v1";
-const HOLD_KEY = "one_cafe_held_v1";
-const COUNTER_KEY = "one_cafe_counter_v1";
-const SESSIONS_KEY = "one_cafe_table_sessions_v1";
-const EXPENSES_KEY = "one_cafe_expenses_v1";
-const THEME_KEY = "one_cafe_theme_v1";
+// ─── Server Functions (Vinxi Server IPC) ──────────────────────────────────────
 
-// ─── Default Menu ─────────────────────────────────────────────────────────────
-const DEFAULT_MENU: MenuItem[] = [
-  { id: "m1", name: "بەرگری کلاسیک", category: "خواردنی خێرا", price: 6500, color: "#f97316", icon: "🍔" },
-  { id: "m2", name: "ڕاپی مریشک", category: "خواردنی خێرا", price: 5000, color: "#ef4444", icon: "🌯" },
-  { id: "m3", name: "پەتاتەی سوورەکراو", category: "خواردنی خێرا", price: 2500, color: "#facc15", icon: "🍟" },
-  { id: "m4", name: "پیتزای مارگاریتا", category: "خواردنی خێرا", price: 8000, color: "#dc2626", icon: "🍕" },
-  { id: "m5", name: "ئێسپریسۆ", category: "خواردنەوەی گەرم", price: 2000, color: "#78350f", icon: "☕" },
-  { id: "m6", name: "کاپوچینۆ", category: "خواردنەوەی گەرم", price: 3000, color: "#92400e", icon: "☕" },
-  { id: "m7", name: "چای", category: "خواردنەوەی گەرم", price: 1500, color: "#16a34a", icon: "🍵" },
-  { id: "m8", name: "شۆکۆلاتەی گەرم", category: "خواردنەوەی گەرم", price: 3500, color: "#7c2d12", icon: "🍫" },
-  { id: "m9", name: "ئایس لاتی", category: "خواردنەوەی سارد", price: 3500, color: "#0ea5e9", icon: "🥤" },
-  { id: "m10", name: "لیمۆناد", category: "خواردنەوەی سارد", price: 2500, color: "#eab308", icon: "🍋" },
-  { id: "m11", name: "مۆهیتۆ", category: "خواردنەوەی سارد", price: 4000, color: "#22c55e", icon: "🍹" },
-  { id: "m12", name: "کۆکا کۆلا", category: "خواردنەوەی سارد", price: 1500, color: "#b91c1c", icon: "🥤" },
-  { id: "m13", name: "دوو سێو", category: "نێرگەلە", price: 8000, color: "#16a34a", icon: "💨" },
-  { id: "m14", name: "نێرگەلەی نەعنا", category: "نێرگەلە", price: 8000, color: "#10b981", icon: "💨" },
-  { id: "m15", name: "نێرگەلەی ترێ", category: "نێرگەلە", price: 8500, color: "#7e22ce", icon: "💨" },
-];
+export const getMenuServer = createServerFn()
+  .handler(async () => {
+    const { dbService } = await import("./db");
+    return dbService.getMenu() as MenuItem[];
+  });
 
-// ─── Core Storage Primitives ──────────────────────────────────────────────────
-function read<T>(key: string, fallback: T): T {
-  if (typeof window === "undefined") return fallback;
-  try {
-    const raw = localStorage.getItem(key);
-    return raw ? (JSON.parse(raw) as T) : fallback;
-  } catch {
-    return fallback;
-  }
-}
+export const addMenuItemServer = createServerFn()
+  .inputValidator((data: Omit<MenuItem, "id">) => data)
+  .handler(async ({ data }) => {
+    const { dbService } = await import("./db");
+    return dbService.addMenuItem(data);
+  });
 
-function write<T>(key: string, value: T) {
-  if (typeof window === "undefined") return;
-  localStorage.setItem(key, JSON.stringify(value));
-}
+export const updateMenuItemServer = createServerFn()
+  .inputValidator((data: { id: string; patch: Partial<MenuItem> }) => data)
+  .handler(async ({ data }) => {
+    const { dbService } = await import("./db");
+    return dbService.updateMenuItem(data.id, data.patch);
+  });
 
-// Cross-component reactivity via custom event
-export const CHANGE_EVENT = "one-cafe-store-change";
-function emit(key: string) {
-  window.dispatchEvent(new CustomEvent(CHANGE_EVENT, { detail: key }));
-}
+export const deleteMenuItemServer = createServerFn()
+  .inputValidator((data: string) => data)
+  .handler(async ({ data }) => {
+    const { dbService } = await import("./db");
+    return dbService.deleteMenuItem(data);
+  });
 
-function useStored<T>(key: string, fallback: T): [T, (v: T | ((prev: T) => T)) => void] {
-  const [val, setVal] = useState<T>(() => read(key, fallback));
+export const getOrdersServer = createServerFn()
+  .handler(async () => {
+    const { dbService } = await import("./db");
+    return dbService.getOrders() as Order[];
+  });
 
-  useEffect(() => {
-    const handler = (e: Event) => {
-      const detail = (e as CustomEvent).detail;
-      if (detail === key) setVal(read(key, fallback));
-    };
-    window.addEventListener(CHANGE_EVENT, handler);
-    return () => window.removeEventListener(CHANGE_EVENT, handler);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key]);
+export const addOrderServer = createServerFn()
+  .inputValidator((data: Order) => data)
+  .handler(async ({ data }) => {
+    const { dbService } = await import("./db");
+    return dbService.addOrder(data);
+  });
 
-  const set = useCallback(
-    (v: T | ((prev: T) => T)) => {
-      setVal((prev) => {
-        const next = typeof v === "function" ? (v as (p: T) => T)(prev) : v;
-        write(key, next);
-        emit(key);
-        return next;
-      });
-    },
-    [key],
-  );
+export const updateOrderServer = createServerFn()
+  .inputValidator((data: { id: string; patch: Partial<Order> }) => data)
+  .handler(async ({ data }) => {
+    const { dbService } = await import("./db");
+    return dbService.updateOrder(data.id, data.patch);
+  });
 
-  return [val, set];
-}
+export const getSessionsServer = createServerFn()
+  .handler(async () => {
+    const { dbService } = await import("./db");
+    return dbService.getSessions() as TableSession[];
+  });
 
-// ─── Menu Hook ────────────────────────────────────────────────────────────────
+export const getSessionByIdServer = createServerFn()
+  .inputValidator((data: string) => data)
+  .handler(async ({ data }) => {
+    const { dbService } = await import("./db");
+    return dbService.getSessionById(data) as TableSession | undefined;
+  });
+
+export const settleSessionServer = createServerFn()
+  .inputValidator((data: { id: string; paymentMethod: "cash" | "card"; amountTendered: number }) => data)
+  .handler(async ({ data }) => {
+    const { dbService } = await import("./db");
+    return dbService.settleSession(data.id, data.paymentMethod, data.amountTendered);
+  });
+
+export const deleteSessionServer = createServerFn()
+  .inputValidator((data: string) => data)
+  .handler(async ({ data }) => {
+    const { dbService } = await import("./db");
+    return dbService.deleteSession(data);
+  });
+
+export const reopenSessionServer = createServerFn()
+  .inputValidator((data: string) => data)
+  .handler(async ({ data }) => {
+    const { dbService } = await import("./db");
+    return dbService.reopenSession(data);
+  });
+
+export const getExpensesServer = createServerFn()
+  .handler(async () => {
+    const { dbService } = await import("./db");
+    return dbService.getExpenses() as Expense[];
+  });
+
+export const addExpenseServer = createServerFn()
+  .inputValidator((data: Omit<Expense, "id" | "timestamp">) => data)
+  .handler(async ({ data }) => {
+    const { dbService } = await import("./db");
+    return dbService.addExpense(data);
+  });
+
+export const deleteExpenseServer = createServerFn()
+  .inputValidator((data: string) => data)
+  .handler(async ({ data }) => {
+    const { dbService } = await import("./db");
+    return dbService.deleteExpense(data);
+  });
+
+export const updateExpenseServer = createServerFn()
+  .inputValidator((data: { id: string; patch: Partial<Expense> }) => data)
+  .handler(async ({ data }) => {
+    const { dbService } = await import("./db");
+    return dbService.updateExpense(data.id, data.patch);
+  });
+
+export const getHeldOrdersServer = createServerFn()
+  .handler(async () => {
+    const { dbService } = await import("./db");
+    return dbService.getHeldOrders() as { id: string; lines: OrderLine[]; createdAt: string }[];
+  });
+
+export const addHeldOrderServer = createServerFn()
+  .inputValidator((data: { id: string; lines: OrderLine[] }) => data)
+  .handler(async ({ data }) => {
+    const { dbService } = await import("./db");
+    return dbService.addHeldOrder(data.id, data.lines);
+  });
+
+export const deleteHeldOrderServer = createServerFn()
+  .inputValidator((data: string) => data)
+  .handler(async ({ data }) => {
+    const { dbService } = await import("./db");
+    return dbService.deleteHeldOrder(data);
+  });
+
+// ─── React Client Hooks ──────────────────────────────────────────────────────
+
 export function useMenu() {
-  const [menu, setMenu] = useStored<MenuItem[]>(MENU_KEY, DEFAULT_MENU);
+  const queryClient = useQueryClient();
+  const { data: menu = [] } = useQuery({
+    queryKey: ["menu"],
+    queryFn: () => getMenuServer(),
+  });
 
-  const addItem = (item: Omit<MenuItem, "id">) =>
-    setMenu((prev) => [...prev, { ...item, id: `m_${Date.now()}` }]);
-  const updateItem = (id: string, patch: Partial<MenuItem>) =>
-    setMenu((prev) => prev.map((m) => (m.id === id ? { ...m, ...patch } : m)));
-  const deleteItem = (id: string) => setMenu((prev) => prev.filter((m) => m.id !== id));
+  const addMutation = useMutation({
+    mutationFn: (item: Omit<MenuItem, "id">) => addMenuItemServer({ data: item }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["menu"] }),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: (args: { id: string; patch: Partial<MenuItem> }) => updateMenuItemServer({ data: args }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["menu"] }),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => deleteMenuItemServer({ data: id }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["menu"] }),
+  });
+
+  const addItem = (item: Omit<MenuItem, "id">) => addMutation.mutate(item);
+  const updateItem = (id: string, patch: Partial<MenuItem>) => updateMutation.mutate({ id, patch });
+  const deleteItem = (id: string) => deleteMutation.mutate(id);
   const getItemCategory = (itemId: string): Category | undefined =>
     menu.find((m) => m.id === itemId)?.category;
 
   return { menu, addItem, updateItem, deleteItem, getItemCategory };
 }
 
-// ─── Orders Hook ──────────────────────────────────────────────────────────────
 export function useOrders() {
-  const [orders, setOrders] = useStored<Order[]>(ORDERS_KEY, []);
-  const addOrder = (o: Order) => setOrders((prev) => [o, ...prev]);
-  const updateOrder = (id: string, patch: Partial<Order>) =>
-    setOrders((prev) => prev.map((o) => (o.id === id ? { ...o, ...patch } : o)));
+  const queryClient = useQueryClient();
+  const { data: orders = [] } = useQuery({
+    queryKey: ["orders"],
+    queryFn: () => getOrdersServer(),
+  });
+
+  const addMutation = useMutation({
+    mutationFn: (o: Order) => addOrderServer({ data: o }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+      queryClient.invalidateQueries({ queryKey: ["sessions"] });
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: (args: { id: string; patch: Partial<Order> }) => updateOrderServer({ data: args }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+      queryClient.invalidateQueries({ queryKey: ["sessions"] });
+    },
+  });
+
+  const addOrder = (o: Order) => addMutation.mutate(o);
+  const updateOrder = (id: string, patch: Partial<Order>) => updateMutation.mutate({ id, patch });
+
   return { orders, addOrder, updateOrder };
 }
 
-// ─── Held Orders Hook ─────────────────────────────────────────────────────────
 export function useHeldOrders() {
-  const [held, setHeld] = useStored<{ id: string; lines: OrderLine[]; createdAt: string }[]>(
-    HOLD_KEY,
-    [],
-  );
-  const hold = (lines: OrderLine[]) =>
-    setHeld((prev) => [
-      { id: `h_${Date.now()}`, lines, createdAt: new Date().toISOString() },
-      ...prev,
-    ]);
-  const resume = (id: string) => {
-    const found = held.find((h) => h.id === id);
-    setHeld((prev) => prev.filter((h) => h.id !== id));
-    return found?.lines ?? [];
+  const queryClient = useQueryClient();
+  const { data: held = [] } = useQuery({
+    queryKey: ["held"],
+    queryFn: () => getHeldOrdersServer(),
+  });
+
+  const addMutation = useMutation({
+    mutationFn: (args: { id: string; lines: OrderLine[] }) => addHeldOrderServer({ data: args }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["held"] }),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => deleteHeldOrderServer({ data: id }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["held"] }),
+  });
+
+  const hold = (lines: OrderLine[]) => {
+    const id = `h_${Date.now()}`;
+    addMutation.mutate({ id, lines });
   };
-  const remove = (id: string) => setHeld((prev) => prev.filter((h) => h.id !== id));
+
+  const resume = (id: string): OrderLine[] => {
+    const found = held.find((h) => h.id === id);
+    if (found) {
+      deleteMutation.mutate(id);
+      return found.lines;
+    }
+    return [];
+  };
+
+  const remove = (id: string) => deleteMutation.mutate(id);
+
   return { held, hold, resume, remove };
 }
 
-// ─── Table Sessions Hook ──────────────────────────────────────────────────────
 export function useTableSessions() {
-  const [sessions, setSessions] = useStored<TableSession[]>(SESSIONS_KEY, []);
+  const queryClient = useQueryClient();
+  const { data: sessions = [] } = useQuery({
+    queryKey: ["sessions"],
+    queryFn: () => getSessionsServer(),
+  });
 
-  /** Find the open session for a given table label, or undefined */
+  const settleMutation = useMutation({
+    mutationFn: (args: { id: string; paymentMethod: "cash" | "card"; amountTendered: number }) =>
+      settleSessionServer({ data: args }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["sessions"] }),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => deleteSessionServer({ data: id }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["sessions"] }),
+  });
+
+  const reopenMutation = useMutation({
+    mutationFn: (id: string) => reopenSessionServer({ data: id }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["sessions"] }),
+  });
+
   const findOpenSession = (tableLabel: string): TableSession | undefined =>
     sessions.find(
       (s) => s.tableLabel.trim().toLowerCase() === tableLabel.trim().toLowerCase() && s.status === "open",
     );
 
-  /**
-   * Auto-merge: if an open session exists for this table, append the order.
-   * Otherwise, create a new session. Returns the session id.
-   */
   const addOrderToSession = (order: Order): string => {
-    const tableLabel = order.table?.trim() || "Takeaway";
-    let sessionId = "";
-    setSessions((prev) => {
-      const existingIdx = prev.findIndex(
-        (s) =>
-          s.tableLabel.trim().toLowerCase() === tableLabel.toLowerCase() && s.status === "open",
-      );
-      if (existingIdx >= 0) {
-        const updated = [...prev];
-        updated[existingIdx] = {
-          ...updated[existingIdx],
-          orders: [...updated[existingIdx].orders, order],
-        };
-        sessionId = updated[existingIdx].id;
-        return updated;
-      } else {
-        sessionId = `ses_${Date.now()}`;
-        const newSession: TableSession = {
-          id: sessionId,
-          tableLabel,
-          orders: [order],
-          openedAt: new Date().toISOString(),
-          status: "open",
-        };
-        return [newSession, ...prev];
-      }
-    });
-    return sessionId;
+    // Session grouping is executed transactional server-side in addOrderServer.
+    return "";
   };
 
   const settleSession = (
     id: string,
     paymentMethod: "cash" | "card",
     amountTendered: number,
-  ) => {
-    setSessions((prev) =>
-      prev.map((s) =>
-        s.id === id
-          ? {
-              ...s,
-              status: "settled" as SessionStatus,
-              settledAt: new Date().toISOString(),
-              paymentMethod,
-              amountTendered,
-            }
-          : s,
-      ),
-    );
-  };
+  ) => settleMutation.mutate({ id, paymentMethod, amountTendered });
 
-  const deleteSession = (id: string) =>
-    setSessions((prev) => prev.filter((s) => s.id !== id));
-
-  const reopenSession = (id: string) =>
-    setSessions((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, status: "open" as SessionStatus, settledAt: undefined } : s)),
-    );
+  const deleteSession = (id: string) => deleteMutation.mutate(id);
+  const reopenSession = (id: string) => reopenMutation.mutate(id);
 
   return {
     sessions,
@@ -290,30 +361,42 @@ export function useTableSessions() {
   };
 }
 
-// ─── Expenses Hook ────────────────────────────────────────────────────────────
 export function useExpenses() {
-  const [expenses, setExpenses] = useStored<Expense[]>(EXPENSES_KEY, []);
+  const queryClient = useQueryClient();
+  const { data: expenses = [] } = useQuery({
+    queryKey: ["expenses"],
+    queryFn: () => getExpensesServer(),
+  });
 
-  const addExpense = (e: Omit<Expense, "id" | "timestamp">) =>
-    setExpenses((prev) => [
-      { ...e, id: `exp_${Date.now()}`, timestamp: new Date().toISOString() },
-      ...prev,
-    ]);
+  const addMutation = useMutation({
+    mutationFn: (e: Omit<Expense, "id" | "timestamp">) => addExpenseServer({ data: e }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["expenses"] }),
+  });
 
-  const deleteExpense = (id: string) =>
-    setExpenses((prev) => prev.filter((e) => e.id !== id));
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => deleteExpenseServer({ data: id }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["expenses"] }),
+  });
 
+  const updateMutation = useMutation({
+    mutationFn: (args: { id: string; patch: Partial<Expense> }) => updateExpenseServer({ data: args }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["expenses"] }),
+  });
+
+  const addExpense = (e: Omit<Expense, "id" | "timestamp">) => addMutation.mutate(e);
+  const deleteExpense = (id: string) => deleteMutation.mutate(id);
   const updateExpense = (id: string, patch: Partial<Omit<Expense, "id">>) =>
-    setExpenses((prev) => prev.map((e) => (e.id === id ? { ...e, ...patch } : e)));
+    updateMutation.mutate({ id, patch: patch as Partial<Expense> });
 
   return { expenses, addExpense, deleteExpense, updateExpense };
 }
 
-// ─── Theme Hook ───────────────────────────────────────────────────────────────
 export function useTheme() {
-  const [theme, setTheme] = useStored<Theme>(THEME_KEY, "dark");
+  const [theme, setTheme] = useState<Theme>(() => {
+    if (typeof window === "undefined") return "dark";
+    return (localStorage.getItem("one_cafe_theme_v1") as Theme) ?? "dark";
+  });
 
-  // Apply the data-theme attribute to <html> whenever theme changes
   useEffect(() => {
     if (typeof document === "undefined") return;
     const html = document.documentElement;
@@ -322,6 +405,7 @@ export function useTheme() {
     } else {
       html.removeAttribute("data-theme");
     }
+    localStorage.setItem("one_cafe_theme_v1", theme);
   }, [theme]);
 
   const toggleTheme = () =>
@@ -332,9 +416,11 @@ export function useTheme() {
 
 // ─── Utilities ────────────────────────────────────────────────────────────────
 export function nextOrderNumber(): number {
-  const n = read<number>(COUNTER_KEY, 1000) + 1;
-  write(COUNTER_KEY, n);
-  return n;
+  if (typeof window === "undefined") return 1000;
+  const lastNum = localStorage.getItem("one_cafe_order_counter");
+  const nextNum = lastNum ? parseInt(lastNum) + 1 : 1001;
+  localStorage.setItem("one_cafe_order_counter", nextNum.toString());
+  return nextNum;
 }
 
 export function formatPrice(v: number) {
@@ -365,10 +451,4 @@ export function isToday(iso: string): boolean {
     d.getMonth() === n.getMonth() &&
     d.getDate() === n.getDate()
   );
-}
-
-/** Direct read of sessions from localStorage (non-reactive, for server-side or one-off reads) */
-export function readSessionById(id: string): TableSession | undefined {
-  const sessions = read<TableSession[]>(SESSIONS_KEY, []);
-  return sessions.find((s) => s.id === id);
 }

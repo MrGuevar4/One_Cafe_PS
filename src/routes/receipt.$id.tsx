@@ -1,7 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo } from "react";
 import { ArrowLeft, Printer, Clock } from "lucide-react";
-import { readSessionById, sessionTotal, sessionSubtotal, formatPrice } from "@/lib/pos-store";
+import { getSessionByIdServer, sessionTotal, sessionSubtotal, formatPrice } from "@/lib/pos-store";
 
 export const Route = createFileRoute("/receipt/$id")({
   head: () => ({
@@ -11,12 +10,14 @@ export const Route = createFileRoute("/receipt/$id")({
     ],
   }),
   component: ReceiptPage,
-  loader: ({ params }) => ({ id: params.id }),
+  loader: async ({ params }) => {
+    const session = await getSessionByIdServer({ data: params.id });
+    return { session };
+  },
 });
 
 function ReceiptPage() {
-  const { id } = Route.useLoaderData();
-  const session = useMemo(() => readSessionById(id), [id]);
+  const { session } = Route.useLoaderData();
 
   if (!session) {
     return (

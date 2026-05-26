@@ -65,7 +65,29 @@ app.put("/api/config", (req, res) => {
 const config = loadConfig();
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : config.serverPort ?? 3001;
 
-app.listen(PORT, "0.0.0.0", () => {
+const server = app.listen(PORT, "0.0.0.0", () => {
   console.log(`ONE Cafe Print Server running on http://0.0.0.0:${PORT}`);
   console.log(`Status: http://0.0.0.0:${PORT}/api/status`);
+});
+
+// ─── GRACEFUL SHUTDOWN & GLOBAL ERROR HANDLERS ──────────────────────────────
+const shutdownServer = () => {
+  console.log("Shutting down Print Server gracefully...");
+  server.close(() => {
+    console.log("Print Server closed.");
+    process.exit(0);
+  });
+  // Force close after 5 seconds if hanging
+  setTimeout(() => process.exit(1), 5000);
+};
+
+process.on("SIGINT", shutdownServer);
+process.on("SIGTERM", shutdownServer);
+
+process.on("uncaughtException", (err) => {
+  console.error("CRITICAL: Uncaught Exception detected in Print Server:", err);
+});
+
+process.on("unhandledRejection", (reason, promise) => {
+  console.error("CRITICAL: Unhandled Rejection at:", promise, "reason:", reason);
 });

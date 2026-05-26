@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft, Printer, Clock } from "lucide-react";
-import { getSessionByIdServer, sessionTotal, sessionSubtotal, formatPrice } from "@/lib/pos-store";
+import { getSessionByIdServer, sessionTotal, sessionSubtotal, formatPrice, TableSession } from "@/lib/pos-store";
 
 export const Route = createFileRoute("/receipt/$id")({
   head: () => ({
@@ -11,8 +11,11 @@ export const Route = createFileRoute("/receipt/$id")({
   }),
   component: ReceiptPage,
   loader: async ({ params }) => {
-    const session = await getSessionByIdServer({ data: params.id });
-    return { session };
+    const res = await getSessionByIdServer({ data: params.id });
+    if (res && typeof res === "object" && "success" in res && res.success === false) {
+      return { session: null };
+    }
+    return { session: res as TableSession | undefined };
   },
 });
 
@@ -103,7 +106,7 @@ function ReceiptPage() {
 
             {/* Order lines */}
             <div className="p-5 space-y-4">
-              {session.orders.map((order, idx) => (
+              {session.orders.map((order: any, idx: number) => (
                 <div key={order.id}>
                   <div className="flex items-center gap-2 mb-2">
                     <Clock className="w-3.5 h-3.5 text-muted-foreground" />
@@ -112,7 +115,7 @@ function ReceiptPage() {
                     </span>
                   </div>
                   <div className="space-y-1.5">
-                    {order.lines.map((l) => (
+                    {order.lines.map((l: any) => (
                       <div
                         key={`${idx}-${l.itemId}`}
                         className="flex items-center justify-between text-sm"
@@ -175,8 +178,8 @@ function ReceiptPage() {
           <span>{new Date(session.openedAt).toLocaleDateString("ku-IQ")}</span>
         </div>
         <div className="r-divider">{dashed}</div>
-        {session.orders.flatMap((order) =>
-          order.lines.map((l) => (
+        {session.orders.flatMap((order: any) =>
+          order.lines.map((l: any) => (
             <div key={`${order.id}-${l.itemId}`} className="r-item">
               <div className="r-row">
                 <span className="r-item-name">

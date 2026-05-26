@@ -45,29 +45,37 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   const router = useRouter();
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="max-w-md text-center">
-        <h1 className="text-xl font-semibold tracking-tight text-foreground">
-          ئەم لاپەڕەیە بارنەکرا
+    <div className="flex min-h-screen items-center justify-center bg-background px-4 py-8">
+      <div className="max-w-2xl w-full text-center">
+        <h1 className="text-xl font-semibold tracking-tight text-destructive">
+          هەڵەیەک ڕوویدا لە سیستەمەکەدا
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          کێشەیەک لە لایەن ئێمەوە ڕوویدا. دەتوانیت لاپەڕەکە نوێ بکەیتەوە یان بگەڕێیتەوە بۆ سەرەکی.
+          کێشەیەک ڕوویدا لە کاتی بارکردنی ئەم بەشەدا. تکایە زانیارییەکانی خوارەوە بدە بە بەشی تەکنیکی.
         </p>
-        <div className="mt-6 flex flex-wrap justify-center gap-2">
+        
+        <div className="mt-6 text-left bg-card border border-destructive/20 rounded-xl p-4 overflow-x-auto shadow-sm">
+          <h3 className="font-bold text-destructive mb-2">{error.message || "Unknown Error"}</h3>
+          <pre className="text-xs text-muted-foreground whitespace-pre-wrap font-mono">
+            {error.stack || "No stack trace available"}
+          </pre>
+        </div>
+
+        <div className="mt-6 flex flex-wrap justify-center gap-3">
           <button
             onClick={() => {
               router.invalidate();
               reset();
             }}
-            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+            className="inline-flex items-center justify-center rounded-lg bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground transition-colors hover:bg-primary/90"
           >
             دووبارە هەوڵبدەرەوە
           </button>
           <a
             href="/"
-            className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
+            className="inline-flex items-center justify-center rounded-lg border border-input bg-background px-5 py-2.5 text-sm font-bold text-foreground transition-colors hover:bg-accent"
           >
-            بچۆ سەرەکی
+            گەڕانەوە بۆ سەرەکی
           </a>
         </div>
       </div>

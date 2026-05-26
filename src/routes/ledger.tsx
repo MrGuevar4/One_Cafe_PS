@@ -475,11 +475,11 @@ function AddExpenseModal({
 }) {
   const [category, setCategory] = useState<ExpenseCategory>("پێداویستییەکان");
   const [description, setDescription] = useState("");
-  const [amount, setAmount] = useState<number>(0);
+  const [amount, setAmount] = useState<number | "">("");
 
   const handleSave = () => {
-    if (!description.trim() || amount <= 0) return;
-    onSave({ category, description: description.trim(), amount });
+    if (!description.trim() || amount === "" || amount < 0) return;
+    onSave({ category, description: description.trim(), amount: Number(amount) });
   };
 
   return (
@@ -529,8 +529,8 @@ function AddExpenseModal({
             <input
               id="expense-amount"
               type="number"
-              value={amount || ""}
-              onChange={(e) => setAmount(Number(e.target.value) || 0)}
+              value={amount}
+              onChange={(e) => setAmount(e.target.value === "" ? "" : Number(e.target.value))}
               placeholder="0"
               min={0}
               className="w-full px-3 py-2.5 rounded-lg bg-background border border-border focus:border-primary outline-none text-xl font-bold text-center"
@@ -547,7 +547,7 @@ function AddExpenseModal({
           <button
             id="expense-save-btn"
             onClick={handleSave}
-            disabled={!description.trim() || amount <= 0}
+            disabled={!description.trim() || amount === "" || amount < 0}
             className="flex-1 px-4 py-2.5 rounded-lg bg-primary text-primary-foreground font-bold text-sm shadow-lg shadow-primary/20 hover:brightness-110 transition-all disabled:opacity-40"
           >
             تۆمارکردنی خەرجی

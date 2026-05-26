@@ -129,6 +129,18 @@ Alternatively, you can run them individually:
 
 ---
 
+## 🪟 Windows Setup & Troubleshooting
+
+This project is fully fortified for cross-platform compatibility, including native Windows environments.
+
+1. **Launch Script**: Always use `start.bat` on Windows. It safely manages background processes and gracefully handles path resolution for both the frontend and companion server.
+2. **Build Stability**: The frontend build scripts and Vite configurations are heavily sanitized to guarantee AST path extraction works flawlessly on Windows file systems.
+3. **Clean Re-builds**: If you ever run into a botched state or cache collision (like `TypeError: path.replace is not a function`), forcefully remove the build caches before reinstalling:
+   - *PowerShell*: `Remove-Item -Recurse -Force .vinxi, .output, dist, node_modules -ErrorAction SilentlyContinue`
+   - *cmd*: `rmdir /s /q .vinxi .output dist node_modules 2>nul`
+
+---
+
 ## 🔒 Security & Best Practices
 
 1. **Local Address Binding**: The print server binds explicitly to localhost (`127.0.0.1`), ensuring it is not exposed to other machines in the public network unless configured.

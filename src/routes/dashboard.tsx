@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { DollarSign, ShoppingBag, TrendingUp } from "lucide-react";
-import { formatPrice, useOrders } from "@/lib/pos-store";
+import { formatPrice, useTableSessions, sessionTotal } from "@/lib/pos-store";
 import { AppNav } from "@/components/AppNav";
 
 export const Route = createFileRoute("/dashboard")({
@@ -25,14 +25,26 @@ function isToday(iso: string) {
 }
 
 function DashboardPage() {
-  const { orders } = useOrders();
-  const today = useMemo(() => orders.filter((o) => isToday(o.createdAt)), [orders]);
-  const revenue = today.reduce((s, o) => s + o.total, 0);
-  const itemsSold = today.reduce(
+  const { sessions } = useTableSessions();
+  
+  const todaySettledSessions = useMemo(
+    () => sessions.filter((s) => s.status === "settled" && isToday(s.settledAt ?? "")),
+    [sessions],
+  );
+
+  const todayOrders = useMemo(
+    () => todaySettledSessions.flatMap((s) => s.orders),
+    [todaySettledSessions],
+  );
+
+  const revenue = todaySettledSessions.reduce((sum, s) => sum + sessionTotal(s), 0);
+  
+  const itemsSold = todayOrders.reduce(
     (s, o) => s + o.lines.reduce((ss, l) => ss + l.qty, 0),
     0,
   );
-  const avg = today.length ? Math.round(revenue / today.length) : 0;
+  
+  const avg = todaySettledSessions.length ? Math.round(revenue / todaySettledSessions.length) : 0;
 
   return (
     <div className="min-h-screen">
@@ -56,8 +68,8 @@ function DashboardPage() {
             accent="neon"
           />
           <StatCard
-            label="داواکارییەکانی ئەمڕۆ"
-            value={today.length.toString()}
+            label="دانیشتنەکانی ئەمڕۆ"
+            value={todaySettledSessions.length.toString()}
             icon={<ShoppingBag className="w-5 h-5" />}
             accent="primary"
           />
@@ -77,12 +89,12 @@ function DashboardPage() {
             </span>
           </div>
           <div className="divide-y divide-border">
-            {today.length === 0 && (
+            {todayOrders.length === 0 && (
               <div className="text-center py-12 text-muted-foreground text-sm">
                 هیچ داواکارییەک نییە بۆ ئەمڕۆ. بچۆ هەندێک تۆمار بکە!
               </div>
             )}
-            {today.map((o) => (
+            {todayOrders.map((o) => (
               <div key={o.id} className="px-4 py-3 flex items-center gap-4">
                 <div className="w-12 h-12 rounded-lg bg-accent flex flex-col items-center justify-center shrink-0">
                   <span className="text-[9px] text-muted-foreground">#</span>

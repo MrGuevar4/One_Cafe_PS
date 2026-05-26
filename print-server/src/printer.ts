@@ -18,6 +18,8 @@ function buildPrinter(cfg: PrinterConfig): InstanceType<typeof Printer> {
     return new Printer({
       type: PrinterTypes.EPSON,
       interface: `tcp://${cfg.host}:${cfg.port ?? 9100}`,
+      characterSet: "ARABIC",
+      width: 42,
       options: {
         timeout: 3000,
       },
@@ -27,6 +29,8 @@ function buildPrinter(cfg: PrinterConfig): InstanceType<typeof Printer> {
   return new Printer({
     type: PrinterTypes.EPSON,
     interface: cfg.printerName ?? "/dev/usb/lp0",
+    characterSet: "ARABIC",
+    width: 42,
     options: {
       timeout: 3000,
     },
@@ -63,6 +67,7 @@ export interface PrintJobPayload {
   total?: number;
   timestamp: string;
   sessionId?: string;
+  note?: string;
 }
 
 /**
@@ -99,7 +104,6 @@ export async function printPreparationTicket(
   p.bold(false);
   p.drawLine();
 
-  // Print Table Label and Order Number (double width & height)
   p.alignCenter();
   p.setTextQuadArea();
   p.bold(true);
@@ -108,6 +112,14 @@ export async function printPreparationTicket(
   p.setTextNormal();
   p.bold(false);
   p.drawLine();
+
+  if (payload.note) {
+    p.drawLine();
+    p.bold(true);
+    p.println(`تێبینی: ${payload.note}`);
+    p.bold(false);
+    p.drawLine();
+  }
 
   // Print line items
   p.alignRight();
@@ -158,25 +170,35 @@ export async function printCashierReceipt(
   p.bold(false);
   p.drawLine();
 
-  p.leftRight(`${payload.orderNumber}`, "ژمارەی داواکاری:");
-  p.leftRight(`${payload.tableLabel}`, "مێز:");
+  p.alignRight();
+  p.println(`ژمارەی داواکاری: ${payload.orderNumber}`);
+  p.println(`مێز: ${payload.tableLabel}`);
   p.drawLine();
+
+  if (payload.note) {
+    p.drawLine();
+    p.bold(true);
+    p.println(`تێبینی: ${payload.note}`);
+    p.bold(false);
+    p.drawLine();
+  }
 
   for (const line of lines) {
-    // Price on left, name/quantity on right for RTL alignment
-    p.leftRight(
-      `${(line.price * line.qty).toLocaleString()} دینار`,
-      `${line.qty}x ${line.name}`
-    );
+    p.alignRight();
+    p.println(`${line.qty}x ${line.name}`);
+    p.alignLeft();
+    p.println(`${(line.price * line.qty).toLocaleString()} دینار`);
+    p.drawLine("-");
   }
 
   p.drawLine();
-  p.leftRight(`${(payload.subtotal ?? 0).toLocaleString()} دینار`, "کۆی گشتی");
+  p.alignRight();
+  p.println(`کۆی گشتی: ${(payload.subtotal ?? 0).toLocaleString()} دینار`);
   if (payload.tax && payload.tax > 0) {
-    p.leftRight(`${payload.tax.toLocaleString()} دینار`, "باج");
+    p.println(`باج: ${payload.tax.toLocaleString()} دینار`);
   }
   p.bold(true);
-  p.leftRight(`${(payload.total ?? 0).toLocaleString()} دینار`, "کۆی کۆتایی");
+  p.println(`کۆی کۆتایی: ${(payload.total ?? 0).toLocaleString()} دینار`);
   p.bold(false);
 
   p.drawLine();

@@ -40,7 +40,7 @@ export async function routePrintJob(
   const printPromises: Promise<void>[] = [];
 
   // 1. Kitchen Printer (Fast Food)
-  if (kitchenLines.length > 0 && config.printers.kitchen?.enabled) {
+  if (payload.type !== "cashier" && kitchenLines.length > 0 && config.printers.kitchen?.enabled) {
     printPromises.push(
       enqueuePrintJob("kitchen", async () => {
         try {
@@ -61,7 +61,7 @@ export async function routePrintJob(
   }
 
   // 2. Barista Printer (Beverages)
-  if (baristaLines.length > 0 && config.printers.barista?.enabled) {
+  if (payload.type !== "cashier" && baristaLines.length > 0 && config.printers.barista?.enabled) {
     printPromises.push(
       enqueuePrintJob("barista", async () => {
         try {
@@ -82,7 +82,7 @@ export async function routePrintJob(
   }
 
   // 3. Shisha Printer (Hookah)
-  if (shishaLines.length > 0 && config.printers.shisha?.enabled) {
+  if (payload.type !== "cashier" && shishaLines.length > 0 && config.printers.shisha?.enabled) {
     printPromises.push(
       enqueuePrintJob("shisha", async () => {
         try {

@@ -42,6 +42,7 @@ db.run(`
     tax REAL NOT NULL,
     total REAL NOT NULL,
     table_label TEXT,
+    note TEXT,
     status TEXT NOT NULL,
     FOREIGN KEY (session_id) REFERENCES table_sessions (id) ON DELETE CASCADE
   );
@@ -142,6 +143,7 @@ export interface DBOrder {
   tax: number;
   total: number;
   table?: string;
+  note?: string;
   status: "pending" | "completed";
 }
 
@@ -170,6 +172,22 @@ export interface DBHeldOrder {
   createdAt: string;
 }
 
+export async function runWithRetriesAsync<T>(fn: () => T, maxRetries = 5, backoffMs = 100): Promise<T> {
+  let attempts = 0;
+  while (true) {
+    try {
+      return fn();
+    } catch (err: any) {
+      attempts++;
+      if (err.code === "SQLITE_BUSY" && attempts < maxRetries) {
+        await new Promise((res) => setTimeout(res, backoffMs * attempts));
+        continue;
+      }
+      throw err;
+    }
+  }
+}
+
 // ─── QUERY & MUTATION EXPORTS ────────────────────────────────────────────────
 export const dbService = {
   // Menu CRUD
@@ -185,7 +203,8 @@ export const dbService = {
     }));
   },
 
-  addMenuItem(item: Omit<DBMenuItem, "id">): string {
+  async addMenuItem(item: Omit<DBMenuItem, "id">): Promise<string> {
+    return runWithRetriesAsync(() => {
     const id = `m_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
     const name = (item && item.name) || "";
     const category = (item && item.category) || "";
@@ -196,9 +215,11 @@ export const dbService = {
     db.query("INSERT INTO menu_items (id, name, category, price, color, icon) VALUES (?, ?, ?, ?, ?, ?)")
       .run(id, name, category, price, color, icon);
     return id;
+  });
   },
 
-  updateMenuItem(id: string, patch: Partial<DBMenuItem>): void {
+  async updateMenuItem(id: string, patch: Partial<DBMenuItem>): Promise<void> {
+    return runWithRetriesAsync(() => {
     if (!patch) return;
     const sets: string[] = [];
     const vals: any[] = [];
@@ -211,10 +232,13 @@ export const dbService = {
     if (sets.length === 0) return;
     vals.push(id);
     db.query(`UPDATE menu_items SET ${sets.join(", ")} WHERE id = ?`).run(...vals);
+  });
   },
 
-  deleteMenuItem(id: string): void {
+  async deleteMenuItem(id: string): Promise<void> {
+    return runWithRetriesAsync(() => {
     db.query("DELETE FROM menu_items WHERE id = ?").run(id || "");
+  });
   },
 
   // Orders CRUD
@@ -244,7 +268,8 @@ export const dbService = {
     return orders;
   },
 
-  addOrder(order: DBOrder): void {
+  async addOrder(order: DBOrder): Promise<void> {
+    return runWithRetriesAsync(() => {
     if (!order) return;
     const orderId = order.id || `ord_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
     const tableLabel = (order.table || "").trim() || "Takeaway";
@@ -288,9 +313,11 @@ export const dbService = {
         });
       }
     })();
+  });
   },
 
-  updateOrder(id: string, patch: Partial<DBOrder>): void {
+  async updateOrder(id: string, patch: Partial<DBOrder>): Promise<void> {
+    return runWithRetriesAsync(() => {
     if (!patch) return;
     const sets: string[] = [];
     const vals: any[] = [];
@@ -298,6 +325,7 @@ export const dbService = {
     if (sets.length === 0) return;
     vals.push(id);
     db.query(`UPDATE orders SET ${sets.join(", ")} WHERE id = ?`).run(...vals);
+  });
   },
 
   // Table Sessions CRUD
@@ -385,20 +413,26 @@ export const dbService = {
     };
   },
 
-  settleSession(id: string, paymentMethod: "cash" | "card", amountTendered: number): void {
+  async settleSession(id: string, paymentMethod: "cash" | "card", amountTendered: number): Promise<void> {
+    return runWithRetriesAsync(() => {
     const pMethod = paymentMethod || "cash";
     const amtTendered = Number(amountTendered) || 0;
     db.query("UPDATE table_sessions SET status = 'settled', settled_at = ?, payment_method = ?, amount_tendered = ? WHERE id = ?")
       .run(new Date().toISOString(), pMethod, amtTendered, id);
+  });
   },
 
-  deleteSession(id: string): void {
+  async deleteSession(id: string): Promise<void> {
+    return runWithRetriesAsync(() => {
     db.query("DELETE FROM table_sessions WHERE id = ?").run(id || "");
+  });
   },
 
-  reopenSession(id: string): void {
+  async reopenSession(id: string): Promise<void> {
+    return runWithRetriesAsync(() => {
     db.query("UPDATE table_sessions SET status = 'open', settled_at = NULL, payment_method = NULL, amount_tendered = NULL WHERE id = ?")
       .run(id || "");
+  });
   },
 
   // Expenses CRUD
@@ -413,7 +447,8 @@ export const dbService = {
     }));
   },
 
-  addExpense(e: Omit<DBExpense, "id" | "timestamp">): void {
+  async addExpense(e: Omit<DBExpense, "id" | "timestamp">): Promise<void> {
+    return runWithRetriesAsync(() => {
     const id = `exp_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
     const category = (e && e.category) || "Other";
     const description = (e && e.description) || "";
@@ -421,13 +456,17 @@ export const dbService = {
 
     db.query("INSERT INTO expenses (id, category, description, amount, timestamp) VALUES (?, ?, ?, ?, ?)")
       .run(id, category, description, amount, new Date().toISOString());
+  });
   },
 
-  deleteExpense(id: string): void {
+  async deleteExpense(id: string): Promise<void> {
+    return runWithRetriesAsync(() => {
     db.query("DELETE FROM expenses WHERE id = ?").run(id || "");
+  });
   },
 
-  updateExpense(id: string, patch: Partial<DBExpense>): void {
+  async updateExpense(id: string, patch: Partial<DBExpense>): Promise<void> {
+    return runWithRetriesAsync(() => {
     if (!patch) return;
     const sets: string[] = [];
     const vals: any[] = [];
@@ -438,6 +477,7 @@ export const dbService = {
     if (sets.length === 0) return;
     vals.push(id);
     db.query(`UPDATE expenses SET ${sets.join(", ")} WHERE id = ?`).run(...vals);
+  });
   },
 
   // Held Orders CRUD
@@ -450,13 +490,39 @@ export const dbService = {
     }));
   },
 
-  addHeldOrder(id: string, lines: DBOrderLine[]): void {
+  async addHeldOrder(id: string, lines: DBOrderLine[]): Promise<void> {
+    return runWithRetriesAsync(() => {
     const safeLines = Array.isArray(lines) ? lines : [];
     db.query("INSERT INTO held_orders (id, lines_json, created_at) VALUES (?, ?, ?)")
       .run(id || "", JSON.stringify(safeLines), new Date().toISOString());
+  });
   },
 
-  deleteHeldOrder(id: string): void {
+  async deleteHeldOrder(id: string): Promise<void> {
+    return runWithRetriesAsync(() => {
     db.query("DELETE FROM held_orders WHERE id = ?").run(id || "");
+  });
   },
 };
+
+// ─── GRACEFUL SHUTDOWN & GLOBAL ERROR HANDLERS ──────────────────────────────
+const shutdownDb = () => {
+  console.log("Shutting down... Safely closing SQLite Database.");
+  try {
+    (db as any).close();
+  } catch (err) {
+    console.error("Error while closing database:", err);
+  }
+  process.exit(0);
+};
+
+process.on("SIGINT", shutdownDb);
+process.on("SIGTERM", shutdownDb);
+
+process.on("uncaughtException", (err) => {
+  console.error("CRITICAL: Uncaught Exception detected:", err);
+});
+
+process.on("unhandledRejection", (reason, promise) => {
+  console.error("CRITICAL: Unhandled Rejection at:", promise, "reason:", reason);
+});

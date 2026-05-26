@@ -5,12 +5,22 @@ class PrinterQueue {
   private processing = false;
 
   async add(task: TaskFn): Promise<void> {
+    if (this.queue.length >= 2) {
+      return Promise.reject(new Error("مەکینەی چاپکردن وەڵام ناداتەوە (Offline/Blocked)"));
+    }
     return new Promise<void>((resolve, reject) => {
       this.queue.push(async () => {
+        let timer: any;
+        const timeoutPromise = new Promise<never>((_, rej) => {
+          timer = setTimeout(() => rej(new Error("کاتی چاپکردن بەسەرچوو (Timeout)")), 15000);
+        });
+
         try {
-          await task();
+          await Promise.race([task(), timeoutPromise]);
+          clearTimeout(timer);
           resolve();
         } catch (err) {
+          clearTimeout(timer);
           reject(err);
         }
       });

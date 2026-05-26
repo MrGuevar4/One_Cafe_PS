@@ -51,8 +51,10 @@ function POSPage() {
   const [lines, setLines] = useState<OrderLine[]>([]);
   const [taxRate, setTaxRate] = useState(0);
   const [table, setTable] = useState("");
+  const [note, setNote] = useState("");
   const [lastOrder, setLastOrder] = useState<Order | null>(null);
   const [showHeld, setShowHeld] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const filtered = useMemo(() => menu.filter((m) => m.category === activeCat), [menu, activeCat]);
 
@@ -77,23 +79,29 @@ function POSPage() {
   };
 
   const handlePayPrint = async () => {
-    if (!lines.length) return;
-    const order: Order = {
-      id: `o_${Date.now()}`,
-      number: nextOrderNumber(),
-      createdAt: new Date().toISOString(),
-      lines,
-      subtotal,
-      tax,
-      total,
-      table: table.trim(),
-      status: "pending",
-    };
-    addOrder(order);
-    addOrderToSession(order);
-    setLastOrder(order);
-    setLines([]);
-    setTable("");
+    if (!lines.length || isSubmitting) return;
+    setIsSubmitting(true);
+    
+    try {
+      const order: Order = {
+        id: `o_${Date.now()}`,
+        number: nextOrderNumber(),
+        createdAt: new Date().toISOString(),
+        lines,
+        subtotal,
+        tax,
+        total,
+        table: table.trim(),
+        note: note.trim(),
+        status: "pending",
+      };
+      
+      await addOrder(order);
+      addOrderToSession(order);
+      setLastOrder(order);
+      setLines([]);
+      setTable("");
+      setNote("");
 
     // Route print to kitchen/cafe printers
     const printPayload = {
@@ -110,15 +118,19 @@ function POSPage() {
       tax,
       total,
       timestamp: order.createdAt,
+      note: note.trim(),
     };
 
-    const result = await sendPrintJob(printPayload);
-    if (result.warnings && result.warnings.length > 0) {
-      result.warnings.forEach((warn) => toast.warning(warn, { duration: 6000 }));
-    }
-    if (result.fallback) {
-      toast.error("کێشەیەک لە چاپکردندا هەیە. مەکینەی چاپکردنی کاتی بەکاردێت...");
-      setTimeout(() => window.print(), 100);
+      const result = await sendPrintJob(printPayload);
+      if (result.warnings && result.warnings.length > 0) {
+        result.warnings.forEach((warn) => toast.warning(warn, { duration: 6000 }));
+      }
+      if (result.fallback) {
+        toast.error("کێشەیەک لە چاپکردندا هەیە. مەکینەی چاپکردنی کاتی بەکاردێت...");
+        setTimeout(() => window.print(), 100);
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -353,6 +365,19 @@ function POSPage() {
                   className="w-full px-3 py-2 rounded-lg bg-background border border-border focus:border-primary focus:outline-none text-sm font-medium"
                 />
               </div>
+              <div className="col-span-2">
+                <label className="block text-xs font-semibold text-muted-foreground mb-1.5">
+                  تێبینی (ئارەزوومەندانە)
+                </label>
+                <textarea
+                  id="note-input"
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  placeholder="نموونە: بەبێ پیاز..."
+                  rows={2}
+                  className="w-full px-3 py-2 rounded-lg bg-background border border-border focus:border-primary focus:outline-none text-sm font-medium resize-none"
+                />
+              </div>
               <button
                 id="clear-order-btn"
                 onClick={() => setLines([])}
@@ -378,11 +403,17 @@ function POSPage() {
             <button
               id="pay-print-btn"
               onClick={handlePayPrint}
-              disabled={!lines.length}
+              disabled={!lines.length || isSubmitting}
               className="w-full px-4 py-3 rounded-lg bg-neon hover:brightness-110 text-neon-foreground font-bold flex items-center justify-center gap-2 shadow-lg shadow-neon/20 disabled:opacity-40 disabled:shadow-none transition-all"
             >
-              <Printer className="w-5 h-5" /> پارەدان و چاپکردن
-              <kbd className="ms-2 text-[10px] opacity-60 font-mono">Alt+P</kbd>
+              {isSubmitting ? (
+                <span className="animate-pulse">بەڕێوەیە...</span>
+              ) : (
+                <>
+                  <Printer className="w-5 h-5" /> پارەدان و چاپکردن
+                  <kbd className="ms-2 text-[10px] opacity-60 font-mono">Alt+P</kbd>
+                </>
+              )}
             </button>
           </div>
         </aside>

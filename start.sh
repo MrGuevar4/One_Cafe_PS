@@ -12,8 +12,11 @@ if command -v bun >/dev/null 2>&1; then
   PKG_MANAGER="bun"
   INSTALL_CMD="bun install"
   BUILD_CMD="bun run build"
+  # Resolve absolute path of bun and export its bin directory to PATH
+  BUN_PATH=$(command -v bun)
+  export PATH="$(dirname "$BUN_PATH"):$PATH"
   START_CMD="bun run concurrently -k -n \"WEB,PRINT\" -c \"cyan,magenta\" \"bun run preview\" \"bun print-server/src/index.ts\""
-  echo "✔ Bun detected as the package manager."
+  echo "✔ Bun detected as the package manager (PATH updated: $(dirname "$BUN_PATH"))."
 elif command -v npm >/dev/null 2>&1; then
   PKG_MANAGER="npm"
   INSTALL_CMD="npm install"

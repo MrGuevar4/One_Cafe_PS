@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 export interface ShortcutDef {
   key: string;        // e.g. "p", "h", "1"
@@ -14,6 +14,11 @@ export interface ShortcutDef {
  * Call this hook in any component. When the component unmounts, shortcuts are removed.
  */
 export function useKeyboardShortcuts(shortcuts: ShortcutDef[]) {
+  const shortcutsRef = useRef(shortcuts);
+  useEffect(() => {
+    shortcutsRef.current = shortcuts;
+  }, [shortcuts]);
+
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       // Ignore when typing in input/textarea/select
@@ -24,7 +29,7 @@ export function useKeyboardShortcuts(shortcuts: ShortcutDef[]) {
         target.tagName === "SELECT"
       ) return;
 
-      for (const shortcut of shortcuts) {
+      for (const shortcut of shortcutsRef.current) {
         if (shortcut.enabled === false) continue;
         const keyMatch = e.key.toLowerCase() === shortcut.key.toLowerCase();
         const altMatch = shortcut.altKey ? e.altKey : !e.altKey || !shortcut.altKey;
@@ -47,7 +52,7 @@ export function useKeyboardShortcuts(shortcuts: ShortcutDef[]) {
 
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [shortcuts]);
+  }, []);
 }
 
 /** Global shortcuts that work across the entire app */

@@ -116,12 +116,12 @@ function CashierPage() {
   const selectedItemsTotal = useMemo(() => {
     if (!selected) return 0;
     return allLines
-      .filter((l) => selectedItems.has(`${l.itemId}-${l.name}`))
+      .filter((l, idx) => selectedItems.has(`item-${idx}`))
       .reduce((sum, l) => sum + l.price * l.qty, 0);
   }, [selectedItems, allLines]);
 
   const change = useMemo(() => {
-    const tendered = parseFloat(amountTendered) || 0;
+    const tendered = amountTendered === "" ? currentTotal : (parseFloat(amountTendered) || 0);
     return tendered - currentTotal;
   }, [amountTendered, currentTotal]);
 
@@ -139,13 +139,13 @@ function CashierPage() {
 
   const handleSettle = async () => {
     if (!selected) return;
-    const tendered = parseFloat(amountTendered) || currentTotal;
+    const tendered = amountTendered === "" ? currentTotal : (parseFloat(amountTendered) || 0);
     settleSession(selected.id, paymentMethod, tendered);
 
     // Send full receipt to cashier printer
     const allOrderLines = sessionAllLines(selected);
     const printPayload = {
-      type: "full" as const,
+      type: "cashier" as const,
       orderNumber: selected.orders[0]?.number ?? 0,
       tableLabel: selected.tableLabel,
       lines: allOrderLines.map((l) => ({
@@ -174,8 +174,8 @@ function CashierPage() {
     setSplitMode("none");
   };
 
-  const toggleItemSelection = (line: OrderLine) => {
-    const key = `${line.itemId}-${line.name}`;
+  const toggleItemSelection = (index: number) => {
+    const key = `item-${index}`;
     setSelectedItems((prev) => {
       const next = new Set(prev);
       if (next.has(key)) next.delete(key);
@@ -453,13 +453,13 @@ function CashierPage() {
                         <div className="px-4 py-2.5 border-b border-border text-xs font-bold text-muted-foreground uppercase tracking-wider text-start">
                           بابەتەکان دیاریبکە بۆ دانەدانی پارە
                         </div>
-                        {allLines.map((l) => {
-                          const key = `${l.itemId}-${l.name}`;
+                        {allLines.map((l, idx) => {
+                          const key = `item-${idx}`;
                           const checked = selectedItems.has(key);
                           return (
                             <button
                               key={key}
-                              onClick={() => toggleItemSelection(l)}
+                              onClick={() => toggleItemSelection(idx)}
                               className={`w-full px-4 py-3 flex items-center gap-3 text-start border-b border-border transition-colors ${
                                 checked ? "bg-primary/10" : "hover:bg-accent/50"
                               }`}

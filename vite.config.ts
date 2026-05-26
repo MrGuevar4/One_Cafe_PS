@@ -3,6 +3,7 @@ import react from "@vitejs/plugin-react";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import tsconfigPaths from "vite-tsconfig-paths";
 import tailwindcss from "@tailwindcss/vite";
+import { fileURLToPath, URL } from "node:url";
 
 export default defineConfig({
   plugins: [
@@ -13,7 +14,7 @@ export default defineConfig({
   ],
   resolve: {
     alias: {
-      "@": `${process.cwd()}/src`,
+      "@": fileURLToPath(new URL("./src", import.meta.url)),
     },
     dedupe: [
       "react",
@@ -25,11 +26,11 @@ export default defineConfig({
     ],
   },
   server: {
-    host: "0.0.0.0",
+    host: true,
     port: 3000,
   },
   preview: {
-    host: "0.0.0.0",
+    host: true,
     port: 3000,
   },
 });
